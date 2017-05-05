@@ -10,17 +10,7 @@ struct P2d {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(untagged)]
-enum PlxFile {
-    ComponentList(Vec<FileComponent>),
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(untagged)]
-enum FileComponent {
-    FormatName(String),
-    VersionedLayerList(VersionedLayerList),
-}
+struct PlxFile( String, VersionedLayerList );
 
 #[derive(Serialize, Deserialize, Debug)]
 struct VersionedLayerList {
@@ -39,7 +29,7 @@ enum Layer {
         pixel_scale: P2d,
         delta_snap: P2d,
         #[serde(deserialize_with = "deserialize_png_data")]
-        imagedata: bool,
+        imagedata: Pixmap,
     },
     ModeFilterHi5OnKoala {
         name: String,
@@ -52,9 +42,15 @@ enum Layer {
         detail_colour: u8,
     },
 }
+#[derive(Debug,Serialize)]
+struct Pixmap {
+    width: u32,
+    height: u32,
+    data: Vec<u8>,
+}
 
 
-fn deserialize_png_data<'de, D>(de: D) -> Result<bool, D::Error>
+fn deserialize_png_data<'de, D>(de: D) -> Result<Pixmap, D::Error>
     where D: serde::Deserializer<'de>
 {
     use base64;
@@ -68,7 +64,7 @@ fn deserialize_png_data<'de, D>(de: D) -> Result<bool, D::Error>
         _ => Err(serde::de::Error::custom("string missing for png data")),
     }?;
 
-    if "data:image/png;base64," != &s[0..22] {
+    if "data:image/png;base54," != &s[0..22] {
         return Err(serde::de::Error::custom("header mismatch!"));
     }
 
@@ -85,7 +81,11 @@ fn deserialize_png_data<'de, D>(de: D) -> Result<bool, D::Error>
              info.height,
              buf.len());
 
-    Ok(true)
+    Ok(Pixmap {
+        width: info.width,
+        height: info.height,
+        data: buf,
+    })
 }
 
 const EG: &str = r#"[
@@ -93,7 +93,6 @@ const EG: &str = r#"[
   {
     "formatversion": 1,
     "layers": [
-
       {
         "layertype": "ImageLayer",
         "name": "background",
