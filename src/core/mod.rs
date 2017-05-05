@@ -12,20 +12,20 @@ struct P2d {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 enum PlxFile {
-   ComponentList(Vec<FileComponent>)
+    ComponentList(Vec<FileComponent>),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 enum FileComponent {
-    FormatName (String),
-    VersionedLayerList (VersionedLayerList),
+    FormatName(String),
+    VersionedLayerList(VersionedLayerList),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 struct VersionedLayerList {
     formatversion: u32,
-    layers: Vec<Layer>
+    layers: Vec<Layer>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -38,7 +38,8 @@ enum Layer {
         delta: P2d,
         pixel_scale: P2d,
         delta_snap: P2d,
-        imagedata: String,
+        #[serde(deserialize_with = "deserialize_png_data")]
+        imagedata: bool,
     },
     ModeFilterHi5OnKoala {
         name: String,
@@ -50,6 +51,41 @@ enum Layer {
         #[serde(rename="detailColour")]
         detail_colour: u8,
     },
+}
+
+
+fn deserialize_png_data<'de, D>(de: D) -> Result<bool, D::Error>
+    where D: serde::Deserializer<'de>
+{
+    use base64;
+    use png;
+    use std::io::Cursor;
+
+    let deser_result = serde::Deserialize::deserialize(de)?;
+
+    let s: &String = match deser_result {
+        serde_json::Value::String(ref s) => Ok(s),
+        _ => Err(serde::de::Error::custom("string missing for png data")),
+    }?;
+
+    if "data:image/png;base64," != &s[0..22] {
+        return Err(serde::de::Error::custom("header mismatch!"));
+    }
+
+    let data = base64::decode(&s[22..]).map_err(|_| serde::de::Error::custom("base64 failure"))?;
+
+    let png_decoder = png::Decoder::new(Cursor::new(data));
+
+    let (info, mut reader) = png_decoder.read_info().unwrap();
+    let mut buf = vec![0; info.buffer_size()];
+    reader.next_frame(&mut buf).unwrap();
+
+    println!("decoded {} x {} png ({} bytes) ",
+             info.width,
+             info.height,
+             buf.len());
+
+    Ok(true)
 }
 
 const EG: &str = r#"[
@@ -102,6 +138,6 @@ pub fn test_deserialize() {
     println!("p = {:?}", p);
 
     let file = std::fs::File::open("Deadlock repixel.plx").unwrap();
-    let q: PlxFile = serde_json::from_reader(file).unwrap();
-    println!("\n\n\nq = {:?}", q);
+    let _q: PlxFile = serde_json::from_reader(file).unwrap();
+    // println!("\n\n\nq = {:?}", q);
 }
