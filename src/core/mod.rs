@@ -2,6 +2,9 @@
 extern crate serde;
 extern crate serde_json;
 use std;
+pub mod tests;
+
+use self::serde_json::error::Error as SerdeError;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct P2d {
@@ -10,7 +13,7 @@ struct P2d {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct PlxFile( String, VersionedLayerList );
+struct PlxFile(String, VersionedLayerList);
 
 #[derive(Serialize, Deserialize, Debug)]
 struct VersionedLayerList {
@@ -42,11 +45,18 @@ enum Layer {
         detail_colour: u8,
     },
 }
-#[derive(Debug,Serialize)]
+
+#[derive(Serialize)]
 struct Pixmap {
     width: u32,
     height: u32,
     data: Vec<u8>,
+}
+
+impl std::fmt::Debug for Pixmap {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "Pixmap {{ width: {}, height: {}, data: {{...}}  }}", self.width, self.height)
+    }
 }
 
 
@@ -64,7 +74,7 @@ fn deserialize_png_data<'de, D>(de: D) -> Result<Pixmap, D::Error>
         _ => Err(serde::de::Error::custom("string missing for png data")),
     }?;
 
-    if "data:image/png;base54," != &s[0..22] {
+    if "data:image/png;base64," != &s[0..22] {
         return Err(serde::de::Error::custom("header mismatch!"));
     }
 
@@ -72,14 +82,10 @@ fn deserialize_png_data<'de, D>(de: D) -> Result<Pixmap, D::Error>
 
     let png_decoder = png::Decoder::new(Cursor::new(data));
 
-    let (info, mut reader) = png_decoder.read_info().unwrap();
+    let (info, mut reader) = png_decoder.read_info().map_err(|_| serde::de::Error::custom("PNG decoding failure"))?;
     let mut buf = vec![0; info.buffer_size()];
-    reader.next_frame(&mut buf).unwrap();
 
-    println!("decoded {} x {} png ({} bytes) ",
-             info.width,
-             info.height,
-             buf.len());
+    reader.next_frame(&mut buf).map_err(|_| serde::de::Error::custom("PNG decoding failure"))?;
 
     Ok(Pixmap {
         width: info.width,
@@ -88,55 +94,8 @@ fn deserialize_png_data<'de, D>(de: D) -> Result<Pixmap, D::Error>
     })
 }
 
-const EG: &str = r#"[
-  "philexegis",
-  {
-    "formatversion": 1,
-    "layers": [
-      {
-        "layertype": "ImageLayer",
-        "name": "background",
-        "uuid": "9b744f82-4c0d-4951-8a2d-00c01d0a4701",
-        "visible": true,
-        "delta": {
-          "x": 0,
-          "y": 0
-        },
-        "pixel_scale": {
-          "x": 2,
-          "y": 1
-        },
-        "delta_snap": {
-          "x": 2,
-          "y": 1
-        },
-        "imagedata": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKAAAADICAYAAABvaOoaAAADeUlEQVR4Xu3SMQ0AAAzDsJU/6cHI4xKoFHlnCoQFFn67VuAAhCAtAGCa3zmADKQFAEzzOweQgbQAgGl+5wAykBYAMM3vHEAG0gIApvmdA8hAWgDANL9zABlICwCY5ncOIANpAQDT/M4BZCAtAGCa3zmADKQFAEzzOweQgbQAgGl+5wAykBYAMM3vHEAG0gIApvmdA8hAWgDANL9zABlICwCY5ncOIANpAQDT/M4BZCAtAGCa3zmADKQFAEzzOweQgbQAgGl+5wAykBYAMM3vHEAG0gIApvmdA8hAWgDANL9zABlICwCY5ncOIANpAQDT/M4BZCAtAGCa3zmADKQFAEzzOweQgbQAgGl+5wAykBYAMM3vHEAG0gIApvmdA8hAWgDANL9zABlICwCY5ncOIANpAQDT/M4BZCAtAGCa3zmADKQFAEzzOweQgbQAgGl+5wAykBYAMM3vHEAG0gIApvmdA8hAWgDANL9zABlICwCY5ncOIANpAQDT/M4BZCAtAGCa3zmADKQFAEzzOweQgbQAgGl+5wAykBYAMM3vHEAG0gIApvmdA8hAWgDANL9zABlICwCY5ncOIANpAQDT/M4BZCAtAGCa3zmADKQFAEzzOweQgbQAgGl+5wAykBYAMM3vHEAG0gIApvmdA8hAWgDANL9zABlICwCY5ncOIANpAQDT/M4BZCAtAGCa3zmADKQFAEzzOweQgbQAgGl+5wAykBYAMM3vHEAG0gIApvmdA8hAWgDANL9zABlICwCY5ncOIANpAQDT/M4BZCAtAGCa3zmADKQFAEzzOweQgbQAgGl+5wAykBYAMM3vHEAG0gIApvmdA8hAWgDANL9zABlICwCY5ncOIANpAQDT/M4BZCAtAGCa3zmADKQFAEzzOweQgbQAgGl+5wAykBYAMM3vHEAG0gIApvmdA8hAWgDANL9zABlICwCY5ncOIANpAQDT/M4BZCAtAGCa3zmADKQFAEzzOweQgbQAgGl+5wAykBYAMM3vHEAG0gIApvmdA8hAWgDANL9zABlICwCY5ncOIANpAQDT/M4BZCAtAGCa3zmADKQFAEzzOweQgbQAgGl+5wAykBYAMM3vHEAG0gIApvmdA8hAWgDANL9zABlICwCY5ncOIANpAQDT/M4BZCAtAGCa3zmADKQFAEzzOweQgbQAgGl+5w+Y5gDJeUDbHQAAAABJRU5ErkJggg=="
-      },
+fn load_from_reader<R>(r: R) -> Result<PlxFile, SerdeError>
+    where R: std::io::Read
 {
-        "layertype": "ModeFilterHi5OnKoala",
-        "name": "Hi5OnKoala (mode filter)",
-        "uuid": "7966ba30-c1df-4ea0-850c-52508989e43d",
-        "visible": true,
-        "d021": 0,
-        "fivePal": [
-          11,
-          0,
-          12,
-          15,
-          1
-        ],
-        "detailColour": 12
-      }
-    ]
-  }
-]"#;
-
-pub fn test_deserialize() {
-    println!("Hello, world!");
-    let p: PlxFile = serde_json::from_str(EG).unwrap();
-    println!("p = {:?}", p);
-
-    let file = std::fs::File::open("Deadlock repixel.plx").unwrap();
-    let _q: PlxFile = serde_json::from_reader(file).unwrap();
-    // println!("\n\n\nq = {:?}", q);
+    serde_json::from_reader(r)
 }

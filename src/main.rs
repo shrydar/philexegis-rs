@@ -5,5 +5,5 @@ extern crate png;
 mod core;
 
 fn main() {
-    core::test_deserialize();
+    core::tests::test_deserialize();
 }
