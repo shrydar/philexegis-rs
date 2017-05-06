@@ -54,5 +54,9 @@ pub fn test_deserialize() {
     }
 
     let file = std::fs::File::open("Deadlock repixel.plx").unwrap();
-    let _q: PlxFile = load_from_reader(file).unwrap();
+    let q: PlxFile = load_from_reader(file).unwrap();
+
+    extern crate serde_json;
+    let _ss = serde_json::to_writer_pretty(std::io::stdout(), &q);
+
 }

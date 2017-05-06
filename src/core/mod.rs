@@ -32,6 +32,7 @@ enum Layer {
         pixel_scale: P2d,
         delta_snap: P2d,
         #[serde(deserialize_with = "deserialize_png_data")]
+        #[serde(serialize_with = "serialize_png_data")]
         imagedata: Pixmap,
     },
     ModeFilterHi5OnKoala {
@@ -55,10 +56,34 @@ struct Pixmap {
 
 impl std::fmt::Debug for Pixmap {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "Pixmap {{ width: {}, height: {}, data: {{...}}  }}", self.width, self.height)
+        write!(f,
+               "Pixmap {{ width: {}, height: {}, data: {{...}}  }}",
+               self.width,
+               self.height)
     }
 }
 
+
+fn serialize_png_data<S>(p: &Pixmap, se: S) -> Result<S::Ok, S::Error>
+    where S: serde::Serializer
+{
+    use base64;
+    let mut buf: Vec<u8> = Vec::new();
+    {
+        use png;
+        use png::HasParameters;
+        let mut png_encoder = png::Encoder::new(&mut buf, p.width, p.height);
+        png_encoder.set(png::ColorType::RGBA).set(png::BitDepth::Eight);
+
+        let mut writer = png_encoder.write_header().unwrap();
+
+        writer.write_image_data(&p.data).unwrap(); // Save
+    }
+
+
+    let buf64 = format!("data:image/png;base64,{}", base64::encode(&buf));
+    se.serialize_str(&buf64)
+}
 
 fn deserialize_png_data<'de, D>(de: D) -> Result<Pixmap, D::Error>
     where D: serde::Deserializer<'de>
@@ -82,7 +107,8 @@ fn deserialize_png_data<'de, D>(de: D) -> Result<Pixmap, D::Error>
 
     let png_decoder = png::Decoder::new(Cursor::new(data));
 
-    let (info, mut reader) = png_decoder.read_info().map_err(|_| serde::de::Error::custom("PNG decoding failure"))?;
+    let (info, mut reader) = png_decoder.read_info()
+        .map_err(|_| serde::de::Error::custom("PNG decoding failure"))?;
     let mut buf = vec![0; info.buffer_size()];
 
     reader.next_frame(&mut buf).map_err(|_| serde::de::Error::custom("PNG decoding failure"))?;
