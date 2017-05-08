@@ -11,4 +11,8 @@ base64 = "~0.5"
 png = "0.7"
 
 
+[dependencies.conrod]
+version = "0.51"
+features = ["winit", "glium"]
+
 
