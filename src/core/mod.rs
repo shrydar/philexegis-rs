@@ -48,10 +48,19 @@ enum Layer {
 }
 
 #[derive(Serialize)]
-struct Pixmap {
-    width: u32,
-    height: u32,
-    data: Vec<u8>,
+pub struct Pixmap {
+    pub width: u32,
+    pub height: u32,
+    pub data: Vec<u8>,
+}
+impl Pixmap {
+    pub fn new(w:u32, h:u32) -> Pixmap {
+        Pixmap {
+        width:w,
+        height:h,
+        data:vec![0;(w*h*4) as usize],
+        }
+    }
 }
 
 impl std::fmt::Debug for Pixmap {
