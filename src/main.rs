@@ -9,6 +9,6 @@ mod ui;
 
 
 fn main() {
-    //core::tests::test_deserialize();
+    core::tests::test_deserialize();
     ui::run();
 }

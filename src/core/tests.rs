@@ -44,19 +44,24 @@ const SAMPLE: &str = r#"[
 
 pub fn test_deserialize() {
     use ::core::{load_from_reader, PlxFile};
+    extern crate serde_json;
     use std;
     use std::io::Cursor;
 
     println!("Hello, world!");
     match load_from_reader(Cursor::new(&SAMPLE)) {
-        Ok(p) => println!("Ok! p = {:?}", p),
+        Ok(p) => {
+            println!("Ok! p = {:?}", p);
+                let ss = serde_json::to_writer_pretty(std::io::stdout(), &p);
+        },
         Err(p) => println!("Err:  {:?}", p),
     }
 
     let file = std::fs::File::open("Deadlock repixel.plx").unwrap();
     let q: PlxFile = load_from_reader(file).unwrap();
 
-    extern crate serde_json;
-    let _ss = serde_json::to_writer_pretty(std::io::stdout(), &q);
+    let fo = std::fs::File::create("Deadlock export.plx").unwrap();
+    let ss = serde_json::to_writer_pretty(fo, &q);
+
 
 }
