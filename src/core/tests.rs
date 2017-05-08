@@ -52,7 +52,7 @@ pub fn test_deserialize() {
     match load_from_reader(Cursor::new(&SAMPLE)) {
         Ok(p) => {
             println!("Ok! p = {:?}", p);
-                let ss = serde_json::to_writer_pretty(std::io::stdout(), &p);
+                let _ss = serde_json::to_writer_pretty(std::io::stdout(), &p);
         },
         Err(p) => println!("Err:  {:?}", p),
     }
@@ -61,7 +61,7 @@ pub fn test_deserialize() {
     let q: PlxFile = load_from_reader(file).unwrap();
 
     let fo = std::fs::File::create("Deadlock export.plx").unwrap();
-    let ss = serde_json::to_writer_pretty(fo, &q);
+    let _ss = serde_json::to_writer_pretty(fo, &q);
 
 
 }
