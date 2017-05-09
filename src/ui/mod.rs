@@ -1,6 +1,6 @@
 use conrod::backend::glium::glium;
 use conrod::backend::glium::glium::{DisplayBuild, Surface};
-use conrod::{widget, Colorable, Positionable, Widget};
+use conrod::{widget, Colorable, Positionable, Widget, Sizeable};
 use std::{time, thread, mem, slice};
 use core::Pixmap;
 
@@ -13,6 +13,8 @@ type ImageMap = conrod::image::Map<glium::texture::Texture2d>;
 
 struct RenderFrame {
     pixbuf: PixelBuffer,
+    width:u32,
+    height:u32,
     tx_id: conrod::image::Id,
 }
 impl RenderFrame {
@@ -25,6 +27,8 @@ impl RenderFrame {
         let tx_id = image_map.insert(tx0);
         RenderFrame {
             pixbuf: pixbuf,
+            width:p.width,
+            height:p.height,
             tx_id: tx_id,
         }
     }
@@ -32,15 +36,49 @@ impl RenderFrame {
         debug_assert_eq!([1u8, 2, 3, 4], unsafe {
             mem::transmute::<(u8, u8, u8, u8), [u8; 4]>((1u8, 2u8, 3u8, 4u8))
         });
+        debug_assert_eq!(self.width, p.width);
+        debug_assert_eq!(self.height, p.height);
+        if self.width==p.width && self.height==p.height {
 
-        unsafe {
-            self.pixbuf.write(slice::from_raw_parts(p.data.as_ptr() as *const (u8, u8, u8, u8),
-                                                    p.data.len() / 4));
+            unsafe {
+                self.pixbuf.write(slice::from_raw_parts(p.data.as_ptr() as *const (u8, u8, u8, u8),
+                p.data.len() / 4));
+            }
+            image_map[&self.tx_id]
+                .mipmap(0)
+                .unwrap()
+                .raw_upload_from_pixel_buffer(self.pixbuf.as_slice(), 0..p.width, 0..p.height, 0..1);
         }
-        image_map[&self.tx_id]
-            .mipmap(0)
-            .unwrap()
-            .raw_upload_from_pixel_buffer(self.pixbuf.as_slice(), 0..p.width, 0..p.height, 0..1);
+    }
+}
+
+struct Pacer {
+    start: time::Instant,
+    last_update: time::Instant,
+    increment: time::Duration,
+}
+impl Pacer {
+    fn from_millis(millis: u64) -> Pacer {
+        let now = time::Instant::now();
+        Pacer {
+            start: now,
+            last_update: now,
+            increment: time::Duration::from_millis(millis),
+        }
+    }
+    fn tick(&mut self) -> f64 {
+        let now = time::Instant::now();
+        let duration_since_last_update = now.duration_since(self.last_update);
+        if duration_since_last_update < self.increment {
+            thread::sleep(self.increment - duration_since_last_update);
+        }
+
+        let now = time::Instant::now();
+        self.last_update = now;
+        let duration_since_start = now.duration_since(self.start);
+        let t = (duration_since_start.as_secs() as f64) +
+                (duration_since_start.subsec_nanos() as f64) * 1e-9;
+        t
     }
 }
 
@@ -83,11 +121,6 @@ fn anim_test_tx(p0: &mut Pixmap, t: f64) {
 }
 
 pub fn run() {
-
-
-    let mut p0 = Pixmap::new(320, 200);
-    anim_test_tx(&mut p0, 0.0);
-
     let display = glium::glutin::WindowBuilder::new()
         .with_vsync()
         .with_dimensions(WIDTH, HEIGHT)
@@ -96,42 +129,34 @@ pub fn run() {
         .unwrap();
 
     let mut ui = conrod::UiBuilder::new([WIDTH as f64, HEIGHT as f64]).build();
+    let mut renderer = conrod::backend::glium::Renderer::new(&display).unwrap();
+    let mut image_map = conrod::image::Map::<glium::texture::Texture2d>::new();
+
+
 
     const FONT_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"),
                                     "/assets/fonts/NotoSans/NotoSans-Regular.ttf");
     ui.fonts.insert_from_file(FONT_PATH).unwrap();
 
 
-    let mut renderer = conrod::backend::glium::Renderer::new(&display).unwrap();
-    let mut image_map = conrod::image::Map::<glium::texture::Texture2d>::new();
 
-
+    let mut p0 = Pixmap::new(320, 200);
+    anim_test_tx(&mut p0, 0.0);
     let renderframe = RenderFrame::new_for_pixmap(&p0, &display, &mut image_map);
+
+
 
 
     widget_ids!(struct Ids { text, texture_test });
     let ids = Ids::new(ui.widget_id_generator());
 
-    let start = time::Instant::now();
-    let mut last_update = time::Instant::now();
+    let mut pacer = Pacer::from_millis(16);
     'main: loop {
-        let sixteen_ms = time::Duration::from_millis(16);
-        let duration_since_last_update = time::Instant::now().duration_since(last_update);
-        let duration_since_start = time::Instant::now().duration_since(start);
-        if duration_since_last_update < sixteen_ms {
-            thread::sleep(sixteen_ms - duration_since_last_update);
-        }
-        let t = (duration_since_start.as_secs() as f64) +
-                (duration_since_start.subsec_nanos() as f64) * 1e-9;
-        last_update = time::Instant::now();
+        let t = pacer.tick();
 
 
         let events: Vec<_> = display.poll_events().collect();
-
         for event in events {
-
-
-            // Use the `winit` backend feature to convert the winit event to a conrod one.
             if let Some(event) = conrod::backend::winit::convert(event.clone(), &display) {
                 ui.handle_event(event);
             }
@@ -144,16 +169,11 @@ pub fn run() {
             }
         }
 
-
-
         anim_test_tx(&mut p0, t);
-
         renderframe.update_from(&p0, &image_map);
 
 
         {
-
-            use conrod::Sizeable;
             let ui = &mut ui.set_widgets();
 
             widget::Image::new(renderframe.tx_id)
