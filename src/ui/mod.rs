@@ -2,7 +2,7 @@ use conrod::backend::glium::glium;
 use conrod::backend::glium::glium::{DisplayBuild, Surface};
 use conrod::{widget, Colorable, Positionable, Widget, Sizeable};
 use std::{time, thread, mem, slice};
-use core::Pixmap;
+use core::{Pixmap, Editor};
 
 extern crate conrod;
 
@@ -131,6 +131,7 @@ pub fn run() {
     let mut ui = conrod::UiBuilder::new([WIDTH as f64, HEIGHT as f64]).build();
     let mut renderer = conrod::backend::glium::Renderer::new(&display).unwrap();
     let mut image_map = conrod::image::Map::<glium::texture::Texture2d>::new();
+    let mut editor = Editor::new();
 
 
 
@@ -142,7 +143,7 @@ pub fn run() {
 
     let mut p0 = Pixmap::new(320, 200);
     anim_test_tx(&mut p0, 0.0);
-    let renderframe = RenderFrame::new_for_pixmap(&p0, &display, &mut image_map);
+    let renderframe = RenderFrame::new_for_pixmap(editor.view(), &display, &mut image_map);
 
 
 
@@ -170,7 +171,8 @@ pub fn run() {
         }
 
         anim_test_tx(&mut p0, t);
-        renderframe.update_from(&p0, &image_map);
+        //renderframe.update_from(&p0, &image_map);
+        renderframe.update_from(editor.view(), &image_map);
 
 
         {

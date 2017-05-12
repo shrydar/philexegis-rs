@@ -31,9 +31,10 @@ enum Layer {
         delta: P2d,
         pixel_scale: P2d,
         delta_snap: P2d,
-        #[serde(deserialize_with = "deserialize_png_data")]
-        #[serde(serialize_with = "serialize_png_data")]
+        #[serde(deserialize_with = "deserialize_png_data", serialize_with = "serialize_png_data")]
         imagedata: Pixmap,
+        #[serde(skip_serializing, skip_deserializing)]
+        _preview: Option<Pixmap>,
     },
     ModeFilterHi5OnKoala {
         name: String,
@@ -44,8 +45,11 @@ enum Layer {
         five_pal: [u8; 5],
         #[serde(rename="detailColour")]
         detail_colour: u8,
+        #[serde(skip_serializing, skip_deserializing)]
+        _preview: Option<Pixmap>,
     },
 }
+
 
 #[derive(Serialize)]
 pub struct Pixmap {
@@ -71,7 +75,6 @@ impl std::fmt::Debug for Pixmap {
                self.height)
     }
 }
-
 
 fn serialize_png_data<S>(p: &Pixmap, se: S) -> Result<S::Ok, S::Error>
     where S: serde::Serializer
@@ -133,4 +136,29 @@ fn load_from_reader<R>(r: R) -> Result<PlxFile, SerdeError>
     where R: std::io::Read
 {
     serde_json::from_reader(r)
+}
+
+
+
+pub struct Editor {
+    base:Pixmap,
+}
+const DEFAULT_WIDTH:u32= 320;
+const DEFAULT_HEIGHT:u32= 200;
+
+impl Editor {
+    pub fn new()->Editor {
+        Editor {
+            base:Pixmap::new(DEFAULT_WIDTH, DEFAULT_HEIGHT),
+        }
+    }
+    pub fn view<'a>(&mut self)-> &Pixmap {
+        for x in 0..320 { for y in 0..200 {
+            let pi=1280*y+x*4;
+            self.base.data[pi+0]=((x+y)/4%2*255) as u8;
+            self.base.data[pi+3]=255;
+        }
+        }
+        return &self.base;
+    }
 }
