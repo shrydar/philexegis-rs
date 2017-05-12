@@ -46,6 +46,7 @@ enum TaggedLayerRef<'a> {
 trait Layer {
     fn tag(&self) -> TaggedLayerRef;
     fn get_name(&self) -> String;
+    fn composite_over(&self, p: &mut Pixmap);
 }
 impl Layer for ImageLayer {
     fn tag(&self) -> TaggedLayerRef {
@@ -53,6 +54,27 @@ impl Layer for ImageLayer {
     }
     fn get_name(&self) -> String {
         self.name.clone()
+    }
+    fn composite_over(&self, p: &mut Pixmap) {
+
+        let q = &self.imagedata;
+        if !self.visible {
+            return;
+        }
+        for x in 0..p.width {
+            for y in 0..p.height {
+                let pi = ((p.width * y + x) * 4) as usize;
+                let qi = ((q.width * y + x) * 4) as usize;
+                if (x < q.width) && (y < q.height) {
+                    if q.data[qi + 3] == 255 {
+                        p.data[pi + 0] = q.data[qi + 0];
+                        p.data[pi + 1] = q.data[qi + 1];
+                        p.data[pi + 2] = q.data[qi + 2];
+                        p.data[pi + 3] = 255;
+                    }
+                }
+            }
+        }
     }
 }
 impl Layer for ModeFilterHi5OnKoala {
@@ -62,6 +84,7 @@ impl Layer for ModeFilterHi5OnKoala {
     fn get_name(&self) -> String {
         self.name.clone()
     }
+    fn composite_over(&self, _p: &mut Pixmap) {}
 }
 fn un_enum(x: TaggedLayer) -> Box<Layer> {
     match x {
@@ -208,13 +231,19 @@ fn save_to_writer<W>(fo: W, v: &Vec<Box<Layer>>) -> ()
 
 pub struct Editor {
     base: Pixmap,
+    layers: Vec<Box<Layer>>,
 }
 const DEFAULT_WIDTH: u32 = 320;
 const DEFAULT_HEIGHT: u32 = 200;
 
 impl Editor {
     pub fn new() -> Editor {
-        Editor { base: Pixmap::new(DEFAULT_WIDTH, DEFAULT_HEIGHT) }
+        let file = std::fs::File::open("Deadlock repixel.plx").unwrap();
+        let layers = load_from_reader(file).unwrap();
+        Editor {
+            base: Pixmap::new(DEFAULT_WIDTH, DEFAULT_HEIGHT),
+            layers: layers,
+        }
     }
     pub fn view<'a>(&mut self) -> &Pixmap {
         for x in 0..320 {
@@ -223,6 +252,9 @@ impl Editor {
                 self.base.data[pi + 0] = ((x + y) / 4 % 2 * 255) as u8;
                 self.base.data[pi + 3] = 255;
             }
+        }
+        for l in &self.layers {
+            l.composite_over(&mut self.base);
         }
         return &self.base;
     }
