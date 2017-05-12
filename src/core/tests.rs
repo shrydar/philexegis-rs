@@ -1,5 +1,5 @@
 
-const SAMPLE: &str = r#"[
+const SAMPLE: &str = concat!(r#"[
   "philexegis",
   {
     "formatversion": 1,
@@ -21,7 +21,13 @@ const SAMPLE: &str = r#"[
           "x": 1,
           "y": 1
         },
-        "imagedata": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAACQCAYAAABpsGmBAAAA6ElEQVR4Xu3WsQ1BYRiF4f82OgWFQiKiFp1aaFnj7qAQiR1upTCGTogNbKBSssJviK/4mudMcPJUb1NrrSVxjQMECBAgQIBAusDjtQ31wH20CtVE4wABAgQIECCQLtB1XagHbrNhrAccIECAAAECBNIF2rYN9UD97mM94AABAgQIECCQLrA8b0I9cLyOYz3gAAECBAgQIJAucFz3Qz3Q+5xiPeAAAQIECBAgkC5wmM5DPfCcDGI94AABAgQIECCQLrBblFAPvH+XWA84QIAAAQIECKQLlBLrgVAMlFIaBwgQIECAAIFsgT9VV+RQNWmB5QAAAABJRU5ErkJggg=="
+        "imagedata": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAACQCAYAAABpsGmBAAAA6ElE"#,
+                             r#"QVR4Xu3WsQ1BYRiF4f82OgWFQiKiFp1aaFnj7qAQiR1upTCGTogNbKBSssJviK/4"#,
+                             r#"mudMcPJUb1NrrSVxjQMECBAgQIBAusDjtQ31wH20CtVE4wABAgQIECCQLtB1XagH"#,
+                             r#"brNhrAccIECAAAECBNIF2rYN9UD97mM94AABAgQIECCQLrA8b0I9cLyOYz3gAAEC"#,
+                             r#"BAgQIJAucFz3Qz3Q+5xiPeAAAQIECBAgkC5wmM5DPfCcDGI94AABAgQIECCQLrBb"#,
+                             r#"lFAPvH+XWA84QIAAAQIECKQLlBLrgVAMlFIaBwgQIECAAIFsgT9VV+RQNWmB5QAA"#,
+                             r#"AABJRU5ErkJggg=="
       },
 {
         "layertype": "ModeFilterHi5OnKoala",
@@ -40,7 +46,7 @@ const SAMPLE: &str = r#"[
       }
     ]
   }
-]"#;
+]"#);
 
 pub fn test_deserialize() {
     use ::core::{save_to_writer, load_from_reader, Layer};
