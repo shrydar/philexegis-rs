@@ -10,5 +10,5 @@ mod ui;
 
 fn main() {
     core::tests::test_deserialize();
-    ui::run();
+    if false { ui::run();}
 }
