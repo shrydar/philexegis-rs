@@ -9,6 +9,10 @@ mod ui;
 
 
 fn main() {
-    core::tests::test_deserialize();
-    if false { ui::run();}
+    if true {
+        core::tests::test_deserialize();
+    }
+    if true {
+        ui::run();
+    }
 }

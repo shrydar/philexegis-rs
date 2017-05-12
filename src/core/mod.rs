@@ -51,13 +51,17 @@ impl Layer for ImageLayer {
     fn tag(&self) -> TaggedLayerRef {
         TaggedLayerRef::ImageLayer(self)
     }
-    fn get_name(&self) -> String {self.name.clone()}
+    fn get_name(&self) -> String {
+        self.name.clone()
+    }
 }
 impl Layer for ModeFilterHi5OnKoala {
     fn tag(&self) -> TaggedLayerRef {
         TaggedLayerRef::ModeFilterHi5OnKoala(self)
     }
-    fn get_name(&self) -> String {self.name.clone()}
+    fn get_name(&self) -> String {
+        self.name.clone()
+    }
 }
 fn un_enum(x: TaggedLayer) -> Box<Layer> {
     match x {
@@ -179,7 +183,9 @@ fn load_from_reader<R>(r: R) -> Result<Vec<Box<Layer>>, SerdeError>
     where R: std::io::Read
 {
     let p: PlxFile = serde_json::from_reader(r)?;
-    if p.1.formatversion!=1 {return Err(serde::de::Error::custom("incorrect format version"));}
+    if p.1.formatversion != 1 {
+        return Err(serde::de::Error::custom("incorrect format version"));
+    }
     let mut a: Vec<TaggedLayer> = p.1.layers;
     return Ok(a.drain(..).map(un_enum).collect());
 }

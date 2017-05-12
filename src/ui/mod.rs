@@ -13,36 +13,31 @@ type ImageMap = conrod::image::Map<glium::texture::Texture2d>;
 
 struct RenderFrame {
     pixbuf: PixelBuffer,
-    width:u32,
-    height:u32,
+    width: u32,
+    height: u32,
     tx_id: conrod::image::Id,
 }
 impl RenderFrame {
-    fn new_for_pixmap(p: &Pixmap,
-                      display: &glium::Display,
-                      image_map: &mut ImageMap)
-                      -> RenderFrame {
+    fn new_for_pixmap(p: &Pixmap, display: &glium::Display, image_map: &mut ImageMap) -> RenderFrame {
         let pixbuf = PixelBuffer::new_empty(display, (p.width * p.height) as usize);
         let tx0 = px_to_tx(p, &display);
         let tx_id = image_map.insert(tx0);
         RenderFrame {
             pixbuf: pixbuf,
-            width:p.width,
-            height:p.height,
+            width: p.width,
+            height: p.height,
             tx_id: tx_id,
         }
     }
     fn update_from(&self, p: &Pixmap, image_map: &ImageMap) -> () {
-        debug_assert_eq!([1u8, 2, 3, 4], unsafe {
-            mem::transmute::<(u8, u8, u8, u8), [u8; 4]>((1u8, 2u8, 3u8, 4u8))
-        });
+        debug_assert_eq!([1u8, 2, 3, 4],
+                         unsafe { mem::transmute::<(u8, u8, u8, u8), [u8; 4]>((1u8, 2u8, 3u8, 4u8)) });
         debug_assert_eq!(self.width, p.width);
         debug_assert_eq!(self.height, p.height);
-        if self.width==p.width && self.height==p.height {
+        if self.width == p.width && self.height == p.height {
 
             unsafe {
-                self.pixbuf.write(slice::from_raw_parts(p.data.as_ptr() as *const (u8, u8, u8, u8),
-                p.data.len() / 4));
+                self.pixbuf.write(slice::from_raw_parts(p.data.as_ptr() as *const (u8, u8, u8, u8), p.data.len() / 4));
             }
             image_map[&self.tx_id]
                 .mipmap(0)
@@ -76,8 +71,7 @@ impl Pacer {
         let now = time::Instant::now();
         self.last_update = now;
         let duration_since_start = now.duration_since(self.start);
-        let t = (duration_since_start.as_secs() as f64) +
-                (duration_since_start.subsec_nanos() as f64) * 1e-9;
+        let t = (duration_since_start.as_secs() as f64) + (duration_since_start.subsec_nanos() as f64) * 1e-9;
         t
     }
 }
@@ -89,8 +83,7 @@ const HEIGHT: u32 = 600;
 
 
 fn px_to_tx(p: &Pixmap, display: &glium::Display) -> glium::texture::Texture2d {
-    let raw_image = glium::texture::RawImage2d::from_raw_rgba_reversed(p.data.clone(),
-                                                                       (p.width, p.height));
+    let raw_image = glium::texture::RawImage2d::from_raw_rgba_reversed(p.data.clone(), (p.width, p.height));
     let texture = glium::texture::Texture2d::new(display, raw_image).unwrap();
     texture
 }
@@ -164,14 +157,13 @@ pub fn run() {
 
             match event {
                 glium::glutin::Event::KeyboardInput(_, _, Some(glium::glutin::VirtualKeyCode::Escape)) |
-                    glium::glutin::Event::Closed =>
-                        break 'main,
+                glium::glutin::Event::Closed => break 'main,
                 _ => {}
             }
         }
 
         anim_test_tx(&mut p0, t);
-        //renderframe.update_from(&p0, &image_map);
+        // renderframe.update_from(&p0, &image_map);
         renderframe.update_from(editor.view(), &image_map);
 
 
