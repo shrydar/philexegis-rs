@@ -115,9 +115,8 @@ struct ModeFilterHi5OnKoala {
     #[serde(rename="fivePal")]
     five_pal: [u8; 5],
     #[serde(rename="detailColour")]
-    detail_colour: u8,
-    #[serde(skip_serializing, skip_deserializing)]
-    _preview: Option<Pixmap>,
+    detail_colour: u8, /* #[serde(skip_serializing, skip_deserializing)]
+                        * _preview: Option<Pixmap>, */
 }
 
 
@@ -230,7 +229,8 @@ fn save_to_writer<W>(fo: W, v: &Vec<Box<Layer>>) -> ()
 
 
 pub struct Editor {
-    base: Pixmap,
+    px_base: Pixmap,
+    px_view: Pixmap,
     layers: Vec<Box<Layer>>,
 }
 const DEFAULT_WIDTH: u32 = 320;
@@ -241,21 +241,41 @@ impl Editor {
         let file = std::fs::File::open("Deadlock repixel.plx").unwrap();
         let layers = load_from_reader(file).unwrap();
         Editor {
-            base: Pixmap::new(DEFAULT_WIDTH, DEFAULT_HEIGHT),
+            px_base: Pixmap::new(DEFAULT_WIDTH, DEFAULT_HEIGHT),
+            px_view: Pixmap::new(DEFAULT_WIDTH, DEFAULT_HEIGHT),
             layers: layers,
         }
     }
     pub fn view<'a>(&mut self) -> &Pixmap {
-        for x in 0..320 {
+        {
             for y in 0..200 {
-                let pi = 1280 * y + x * 4;
-                self.base.data[pi + 0] = ((x + y) / 4 % 2 * 255) as u8;
-                self.base.data[pi + 3] = 255;
+                for x in 0..320 {
+                    let pi = 1280 * y + x * 4;
+                    self.px_base.data[pi + 0] = ((x + y) / 4 % 2 * 255) as u8;
+                    self.px_base.data[pi + 3] = 255;
+                }
+            }
+            for l in &self.layers {
+                l.composite_over(&mut self.px_base);
+            }
+            let mut px_view = &mut self.px_view;
+            let px_base = &self.px_base;
+            for dy in 0..px_view.height {
+                let sy = px_base.height - 1 - dy;
+                let mut si = (sy * px_base.width * 4) as usize;
+                let mut di = (dy * px_view.width * 4) as usize;
+                for dx in 0..px_view.width {
+                    let sx = dx;
+                    px_view.data[di + 0] = px_base.data[si + 0];
+                    px_view.data[di + 1] = px_base.data[si + 1];
+                    px_view.data[di + 2] = px_base.data[si + 2];
+                    px_view.data[di + 3] = px_base.data[si + 3];
+
+                    si += 4;
+                    di += 4;
+                }
             }
         }
-        for l in &self.layers {
-            l.composite_over(&mut self.base);
-        }
-        return &self.base;
+        return &self.px_view;
     }
 }

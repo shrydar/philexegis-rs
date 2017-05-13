@@ -187,7 +187,7 @@ pub fn run() {
         if let Some(primitives) = ui.draw_if_changed() {
             renderer.fill(&display, primitives, &image_map);
             let mut target = display.draw();
-            target.clear_color(0.2, 0.0, 0.1, 1.0);
+            target.clear_color(0.1, 0.0, 0.07, 1.0);
             renderer.draw(&display, &mut target, &image_map).unwrap();
             target.finish().unwrap();
         }
