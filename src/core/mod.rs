@@ -65,13 +65,11 @@ impl Layer for ImageLayer {
             for y in 0..p.height {
                 let pi = ((p.width * y + x) * 4) as usize;
                 let qi = ((q.width * y + x) * 4) as usize;
-                if (x < q.width) && (y < q.height) {
-                    if q.data[qi + 3] == 255 {
-                        p.data[pi + 0] = q.data[qi + 0];
-                        p.data[pi + 1] = q.data[qi + 1];
-                        p.data[pi + 2] = q.data[qi + 2];
-                        p.data[pi + 3] = 255;
-                    }
+                if (x < q.width) && (y < q.height) && q.data[qi + 3] == 255 {
+                    p.data[pi + 0] = q.data[qi + 0];
+                    p.data[pi + 1] = q.data[qi + 1];
+                    p.data[pi + 2] = q.data[qi + 2];
+                    p.data[pi + 3] = 255;
                 }
             }
         }
@@ -209,10 +207,11 @@ fn load_from_reader<R>(r: R) -> Result<Vec<Box<Layer>>, SerdeError>
         return Err(serde::de::Error::custom("incorrect format version"));
     }
     let mut a: Vec<TaggedLayer> = p.1.layers;
-    return Ok(a.drain(..).map(un_enum).collect());
+    let list = a.drain(..).map(un_enum).collect();
+    Ok(list)
 }
 
-fn save_to_writer<W>(fo: W, v: &Vec<Box<Layer>>) -> ()
+fn save_to_writer<W>(fo: W, v: &[Box<Layer>]) -> ()
     where W: std::io::Write
 {
 
@@ -222,8 +221,7 @@ fn save_to_writer<W>(fo: W, v: &Vec<Box<Layer>>) -> ()
                                        formatversion: 1,
                                        layers: q,
                                    });
-    let s = serde_json::to_writer_pretty(fo, &p).unwrap();
-    s
+    serde_json::to_writer_pretty(fo, &p).unwrap()
 }
 
 
@@ -246,7 +244,7 @@ impl Editor {
             layers: layers,
         }
     }
-    pub fn view<'a>(&mut self) -> &Pixmap {
+    pub fn view(&mut self) -> &Pixmap {
         {
             for y in 0..200 {
                 for x in 0..320 {
@@ -260,12 +258,13 @@ impl Editor {
             }
             let mut px_view = &mut self.px_view;
             let px_base = &self.px_base;
+            assert_eq!(px_base.width, px_view.width);
+            assert_eq!(px_base.height, px_view.height);
             for dy in 0..px_view.height {
                 let sy = px_base.height - 1 - dy;
                 let mut si = (sy * px_base.width * 4) as usize;
                 let mut di = (dy * px_view.width * 4) as usize;
-                for dx in 0..px_view.width {
-                    let sx = dx;
+                for _ in 0..px_view.width {
                     px_view.data[di + 0] = px_base.data[si + 0];
                     px_view.data[di + 1] = px_base.data[si + 1];
                     px_view.data[di + 2] = px_base.data[si + 2];
@@ -276,6 +275,6 @@ impl Editor {
                 }
             }
         }
-        return &self.px_view;
+        &self.px_view
     }
 }

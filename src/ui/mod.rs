@@ -20,7 +20,7 @@ struct RenderFrame {
 impl RenderFrame {
     fn new_for_pixmap(p: &Pixmap, display: &glium::Display, image_map: &mut ImageMap) -> RenderFrame {
         let pixbuf = PixelBuffer::new_empty(display, (p.width * p.height) as usize);
-        let tx0 = px_to_tx(p, &display);
+        let tx0 = px_to_tx(p, display);
         let tx_id = image_map.insert(tx0);
         RenderFrame {
             pixbuf: pixbuf,
@@ -71,8 +71,7 @@ impl Pacer {
         let now = time::Instant::now();
         self.last_update = now;
         let duration_since_start = now.duration_since(self.start);
-        let t = (duration_since_start.as_secs() as f64) + (duration_since_start.subsec_nanos() as f64) * 1e-9;
-        t
+        (duration_since_start.as_secs() as f64) + (duration_since_start.subsec_nanos() as f64) * 1e-9
     }
 }
 
@@ -84,8 +83,7 @@ const HEIGHT: u32 = 600;
 
 fn px_to_tx(p: &Pixmap, display: &glium::Display) -> glium::texture::Texture2d {
     let raw_image = glium::texture::RawImage2d::from_raw_rgba_reversed(p.data.clone(), (p.width, p.height));
-    let texture = glium::texture::Texture2d::new(display, raw_image).unwrap();
-    texture
+    glium::texture::Texture2d::new(display, raw_image).unwrap()
 }
 
 fn anim_test_tx(p0: &mut Pixmap, t: f64) {
