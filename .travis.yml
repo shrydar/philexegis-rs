@@ -9,7 +9,7 @@ sudo: required
 
 env:
   global:
-      - CRATE_NAME=philexegis-rs
+      - CRATE_NAME=philexegis
 
 matrix:
   include:
