@@ -20,15 +20,15 @@ matrix:
     - env: TARGET=x86_64-unknown-linux-musl
 
     # OSX
-    - env: TARGET=i686-apple-darwin
-      os: osx
+    #    - env: TARGET=i686-apple-darwin   # disabled, winit 0.5.11 has wrong word size in a few places
+    #  os: osx
     - env: TARGET=x86_64-apple-darwin
       os: osx
 
     # *BSD
     - env: TARGET=i686-unknown-freebsd DISABLE_TESTS=1
     - env: TARGET=x86_64-unknown-freebsd DISABLE_TESTS=1
-    - env: TARGET=x86_64-unknown-netbsd DISABLE_TESTS=1
+    #  - env: TARGET=x86_64-unknown-netbsd DISABLE_TESTS=1 # Use of undeclared type or module `dl` in shared_lib 0.1.5
 
     # Other architectures
     # - env: TARGET=aarch64-unknown-linux-gnu
@@ -43,11 +43,11 @@ matrix:
     # - env: TARGET=s390x-unknown-linux-gnu DISABLE_TESTS=1
 
     # Testing other channels
-    - env: TARGET=x86_64-unknown-linux-gnu
-      rust: nightly
-    - env: TARGET=x86_64-apple-darwin
-      os: osx
-      rust: nightly
+    #    - env: TARGET=x86_64-unknown-linux-gnu  # petgraph 0.2.9 issues
+    #      rust: nightly
+    #    - env: TARGET=x86_64-apple-darwin  # petgraph 0.2.9 issues
+    #      os: osx
+    #      rust: nightly
 
 before_install: set -e
 
