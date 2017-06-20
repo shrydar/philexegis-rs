@@ -63,21 +63,11 @@ before_deploy:
   - sh ci/before_deploy.sh
 
 deploy:
-  # - Create a `public_repo` GitHub token. Go to: https://github.com/settings/tokens/new
-  # - Encrypt it: `travis encrypt 0123456789012345678901234567890123456789
-  # - Paste the output down here
-  #
-  # but from https://docs.travis-ci.com/user/deployment/releases :
-  #  Instead of setting it up manually, it is highly recommended to use travis setup releases"
   api_key:
       secure: "rED5MZA2HKQ9SOxwOZ8cRKuAx7G43DIjWKxweMsyC+WBB9Byq4jxuAw6XHmSW28ffdcMzgsUczhD72ms+vkuBFEF0vnghCljEKSjXXOXKl6NrMb8svOxBtQNamxrRT9/gGdpkKxRzjCB0HgiT/OrgHQFxszQjjEFtU+JPm7x5Rqnkp9aYty3m/8uFMiuLYW/HSdmvwR7rJHKFXRjbaZptkqy0BPcMaElGUJ8+Kno8SO5bOROZZc5TYl/wnK6+Y0WJac8m6v/FIOjQtMvFF+um4ffIt3ypYT95Tu0G15pMKjj4TNkA4ptyHuK5tv5nUbxw4wHL/fu/n3BGD0lE/o8hOR4GydoiCdt62Ldk/ysKyrFNwZGqjYcHi+iXv0a2DkKsUh/Sb6fnY9pa7DMf4MX9JeL54lvPbE+5k/yziD95C8PzkwH4TAVwF9CdrCRBcHZlUBhQf+lFARhmsxfGLnFChg34NrkGs32VAh02dbBEzuMpzPxwsRQHvi5VTf4FiwplE4WPozF5kmV69rM0tI7PxImlXeGTgDtxdtD9ScnkiTA92tED+vV+0u92Rf3f5Isy7nxeCLufWsvW67SvClqxPFefUcy7F2bvd21KzxIFqPIvf8621pOrJXDof+GaDRprgI+q6x+X5Ztb/4umNs+PFKeeh5jHVscccTg1yTsUC8="
   file_glob: true
   file: $CRATE_NAME-$TRAVIS_TAG-$TARGET.*
   on:
-    # TODO Here you can pick which targets will generate binary releases
-    # In this example, there are some targets that are tested using the stable
-    # and nightly channels. This condition makes sure there is only one release
-    # for such targets and that's generated using the stable channel
     repo: shrydar/philexegis-rs
     condition: $TRAVIS_RUST_VERSION = stable
     tags: true
