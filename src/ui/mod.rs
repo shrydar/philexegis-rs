@@ -1,8 +1,9 @@
 use conrod::backend::glium::glium;
 use conrod::backend::glium::glium::{DisplayBuild, Surface};
-use conrod::{widget, Colorable, Positionable, Widget, Sizeable};
+use conrod::{widget, Colorable, Labelable, Positionable, Sizeable, Widget};
 use std::{time, thread, mem, slice};
 use core::{Pixmap, Editor};
+
 
 extern crate conrod;
 
@@ -111,6 +112,74 @@ fn anim_test_tx(p0: &mut Pixmap, t: f64) {
     }
 }
 
+macro_rules! trigger {
+    ($ui:expr,$id:expr, $y:expr, $name:expr, $action:block) => {
+                for _click in widget::Button::new()
+                    .x_y(-(WIDTH as f64) * 0.5 + 40.0, (HEIGHT as f64) * 0.5 - 20.0-24.0*($y as f64))
+                    .w_h(80.0, 20.0)
+                    .color(conrod::color::WHITE)
+                    .label($name)
+                    .label_font_size(14)
+                    .label_color(conrod::color::BLACK)
+                    //.horizontal_align(HorizontalAlign::Left)
+                    .set($id, $ui)
+                    $action
+    }
+}
+
+enum UIState {
+    Main,
+    Load,
+}
+
+use std;
+use std::path::{Path, PathBuf};
+use std::fs;
+
+struct DirEnt {
+    name: String,
+    is_dir: bool,
+    is_plx: bool,
+}
+
+fn getdir(dir: &Path) -> std::io::Result<Vec<DirEnt>> {
+    let mut files: Vec<DirEnt> = vec![DirEnt {
+                                          name: "..".to_string(),
+                                          is_dir: true,
+                                          is_plx: false,
+                                      }];
+    if dir.is_dir() {
+        for entry in fs::read_dir(dir)? {
+            let path = entry?.path();
+
+            let name = if let Some(x) = path.file_name() {
+                if let Some(x) = x.to_str() {
+                    x
+                } else {
+                    "non unicode"
+                }
+            } else {
+                "foo"
+            };
+            let is_dir = path.is_dir();
+            let is_plx = if let Some(x) = path.extension() {
+                x == "plx"
+            } else {
+                false
+            };
+            if is_dir || is_plx {
+                files.push(DirEnt {
+                    name: name.to_string(),
+                    is_dir: is_dir,
+                    is_plx: is_plx,
+                });
+            }
+        }
+
+    }
+    Ok(files)
+}
+
 pub fn run() {
     let display = glium::glutin::WindowBuilder::new()
         .with_vsync()
@@ -126,9 +195,22 @@ pub fn run() {
 
 
 
-    const FONT_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"),
-                                    "/assets/fonts/NotoSans/NotoSans-Regular.ttf");
-    ui.fonts.insert_from_file(FONT_PATH).unwrap();
+    let font_paths = ["NotoSans-Regular.ttf".to_string(),
+                      concat!(env!("CARGO_MANIFEST_DIR"),
+                              "/assets/fonts/NotoSans/NotoSans-Regular.ttf")
+                          .to_string()];
+    let mut font_loaded = false;
+    for p in font_paths.iter() {
+        if let Ok(x) = ui.fonts.insert_from_file(p) {
+            println!("font loaded from {}:{:?}", p, x);
+            font_loaded = true;
+            break;
+        }
+    }
+    if !font_loaded {
+        println!("Failed to load font");
+        return;
+    }
 
 
 
@@ -137,12 +219,19 @@ pub fn run() {
     let renderframe = RenderFrame::new_for_pixmap(editor.view(), &display, &mut image_map);
 
 
+    let mut curdir = PathBuf::from(".");
+    let mut dirlist = getdir(&curdir).unwrap();
 
 
-    widget_ids!(struct Ids { text, texture_test });
+
+
+
+
+    widget_ids!(struct Ids { text, texture_test, id_load, id_save, id_export, id_quit, id_ok, id_cancel, id_list });
     let ids = Ids::new(ui.widget_id_generator());
 
     let mut pacer = Pacer::from_millis(16);
+    let mut ui_state = UIState::Main;
     'main: loop {
         let t = pacer.tick();
 
@@ -165,19 +254,88 @@ pub fn run() {
         renderframe.update_from(editor.view(), &image_map);
 
 
-        {
-            let ui = &mut ui.set_widgets();
+        match ui_state {
+            UIState::Load => {
+                let ui = &mut ui.set_widgets();
+                trigger!(ui,ids.id_ok, 0, "load", {ui_state = UIState::Main; });
+                trigger!(ui,ids.id_cancel, 1, "cancel", {ui_state = UIState::Main; });
 
-            widget::Image::new(renderframe.tx_id)
-                .w_h((p0.width * 2) as f64, (p0.height * 2) as f64)
-                .middle()
-                .set(ids.texture_test, ui);
 
-            widget::Text::new("Wombats!")
-                .x_y(70.0 * t.sin(), 60.0 * t.cos())
-                .color(conrod::color::WHITE)
-                .font_size(32)
-                .set(ids.text, ui);
+
+                // Instantiate the `ListSelect` widget.
+                let num_items = dirlist.len();
+                let item_h = 30.0;
+                let font_size = item_h as conrod::FontSize / 2;
+                let (mut events, scrollbar) = widget::ListSelect::single(num_items, 40.0)
+                    .scrollbar_next_to()
+                    .middle()
+                    .w_h(400.0, 230.0)
+                    .set(ids.id_list, ui);
+
+                let mut updatelist = false;
+                // Handle the `ListSelect`s events.
+                while let Some(event) = events.next(ui, |i| i < 2) {
+                    use conrod::widget::list_select::Event;
+                    match event {
+                        // For the `Item` events we instantiate the `List`'s items.
+                        Event::Item(item) => {
+                            let label = &dirlist[item.i].name;
+                            let (color, label_color) = match dirlist[item.i].is_dir {
+                                true => (conrod::color::LIGHT_BLUE, conrod::color::YELLOW),
+                                false => (conrod::color::LIGHT_GREY, conrod::color::BLACK),
+                            };
+                            let button = widget::Button::new()
+                                .color(color)
+                                .label(label)
+                                .label_font_size(font_size)
+                                .label_color(label_color);
+                            item.set(button, ui);
+                        }
+
+                        // The selection has changed.
+                        Event::Selection(j) => {
+                            if dirlist[j].is_plx {
+                                let loadpath = curdir.with_file_name(&dirlist[j].name);
+                                println!("time to load {:?}",loadpath);
+                            } else if dirlist[j].is_dir {
+                                curdir.push(&dirlist[j].name);
+                                curdir = curdir.canonicalize().unwrap();
+                                updatelist = true;
+                            }
+                        }
+
+                        _ => (),
+                    }
+                }
+
+                // Instantiate the scrollbar for the list.
+                if let Some(s) = scrollbar {
+                    s.set(ui);
+                }
+                if updatelist {
+                    dirlist = getdir(&curdir).unwrap()
+                }
+
+            }
+            UIState::Main => {
+                let ui = &mut ui.set_widgets();
+
+                widget::Image::new(renderframe.tx_id)
+                    .w_h((p0.width * 2) as f64, (p0.height * 2) as f64)
+                    .middle()
+                    .set(ids.texture_test, ui);
+
+                widget::Text::new("Wombats!")
+                    .x_y(70.0 * t.sin(), 60.0 * t.cos())
+                    .color(conrod::color::WHITE)
+                    .font_size(32)
+                    .set(ids.text, ui);
+
+                trigger!(ui,ids.id_load,   0, "load", {ui_state = UIState::Load; });
+                trigger!(ui,ids.id_save,   1, "save", {});
+                trigger!(ui,ids.id_export, 2, "export", {println!("boo")});
+                trigger!(ui,ids.id_quit, 3, "quit", {break 'main});
+            }
         }
 
 
