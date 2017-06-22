@@ -2,6 +2,7 @@
 extern crate serde;
 extern crate serde_json;
 use std;
+use std::path::PathBuf;
 pub mod tests;
 
 use self::serde_json::error::Error as SerdeError;
@@ -244,6 +245,14 @@ impl Editor {
             layers: layers,
         }
     }
+    pub fn load(&mut self, path: &PathBuf) {
+        let file = std::fs::File::open(path).unwrap();
+        match load_from_reader(file) {
+            Ok(layers) => self.layers = layers,
+            Err(e) => println!("failed to load {:?}: {:?}", path, e),
+        }
+    }
+
     pub fn view(&mut self) -> &Pixmap {
         {
             for y in 0..200 {

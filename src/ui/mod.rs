@@ -1,7 +1,9 @@
 use conrod::backend::glium::glium;
 use conrod::backend::glium::glium::{DisplayBuild, Surface};
 use conrod::{widget, Colorable, Labelable, Positionable, Sizeable, Widget};
-use std::{time, thread, mem, slice};
+use std;
+use std::path::{Path, PathBuf};
+use std::{fs, time, thread, mem, slice};
 use core::{Pixmap, Editor};
 
 
@@ -132,9 +134,6 @@ enum UIState {
     Load,
 }
 
-use std;
-use std::path::{Path, PathBuf};
-use std::fs;
 
 struct DirEnt {
     name: String,
@@ -257,8 +256,13 @@ pub fn run() {
         match ui_state {
             UIState::Load => {
                 let ui = &mut ui.set_widgets();
-                trigger!(ui,ids.id_ok, 0, "load", {ui_state = UIState::Main; });
-                trigger!(ui,ids.id_cancel, 1, "cancel", {ui_state = UIState::Main; });
+                trigger!(ui,ids.id_cancel, 0, "cancel", {ui_state = UIState::Main; });
+
+                widget::Text::new("Load:")
+                    .x_y(0.0, (HEIGHT as f64) / 2.0 - 16.0)
+                    .color(conrod::color::WHITE)
+                    .font_size(32)
+                    .set(ids.text, ui);
 
 
 
@@ -266,10 +270,10 @@ pub fn run() {
                 let num_items = dirlist.len();
                 let item_h = 30.0;
                 let font_size = item_h as conrod::FontSize / 2;
-                let (mut events, scrollbar) = widget::ListSelect::single(num_items, 40.0)
+                let (mut events, scrollbar) = widget::ListSelect::single(num_items, item_h)
                     .scrollbar_next_to()
                     .middle()
-                    .w_h(400.0, 230.0)
+                    .w_h(400.0, 320.0)
                     .set(ids.id_list, ui);
 
                 let mut updatelist = false;
@@ -295,8 +299,10 @@ pub fn run() {
                         // The selection has changed.
                         Event::Selection(j) => {
                             if dirlist[j].is_plx {
-                                let loadpath = curdir.with_file_name(&dirlist[j].name);
+                                let loadpath = curdir.join(&dirlist[j].name);
                                 println!("time to load {:?}",loadpath);
+                                editor.load(&loadpath);
+                                ui_state = UIState::Main;
                             } else if dirlist[j].is_dir {
                                 curdir.push(&dirlist[j].name);
                                 curdir = curdir.canonicalize().unwrap();
