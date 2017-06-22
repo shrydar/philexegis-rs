@@ -33,12 +33,14 @@ struct VersionedLayerListRef<'a> {
 #[serde(tag = "layertype")]
 enum TaggedLayer {
     ImageLayer(ImageLayer),
+    ModeFilterKoala(ModeFilterKoala),
     ModeFilterHi5OnKoala(ModeFilterHi5OnKoala),
 }
 #[derive(Serialize)]
 #[serde(tag = "layertype")]
 enum TaggedLayerRef<'a> {
     ImageLayer(&'a ImageLayer),
+    ModeFilterKoala(&'a ModeFilterKoala),
     ModeFilterHi5OnKoala(&'a ModeFilterHi5OnKoala),
 }
 
@@ -76,6 +78,15 @@ impl Layer for ImageLayer {
         }
     }
 }
+impl Layer for ModeFilterKoala {
+    fn tag(&self) -> TaggedLayerRef {
+        TaggedLayerRef::ModeFilterKoala(self)
+    }
+    fn get_name(&self) -> String {
+        self.name.clone()
+    }
+    fn composite_over(&self, _p: &mut Pixmap) {}
+}
 impl Layer for ModeFilterHi5OnKoala {
     fn tag(&self) -> TaggedLayerRef {
         TaggedLayerRef::ModeFilterHi5OnKoala(self)
@@ -88,6 +99,7 @@ impl Layer for ModeFilterHi5OnKoala {
 fn un_enum(x: TaggedLayer) -> Box<Layer> {
     match x {
         TaggedLayer::ImageLayer(v) => Box::new(v),
+        TaggedLayer::ModeFilterKoala(v) => Box::new(v),
         TaggedLayer::ModeFilterHi5OnKoala(v) => Box::new(v),
     }
 }
@@ -104,6 +116,13 @@ struct ImageLayer {
     imagedata: Pixmap,
     #[serde(skip_serializing, skip_deserializing)]
     _preview: Option<Pixmap>,
+}
+#[derive(Serialize, Deserialize, Debug)]
+struct ModeFilterKoala {
+    name: String,
+    uuid: String,
+    visible: bool,
+    d021: u8,
 }
 #[derive(Serialize, Deserialize, Debug)]
 struct ModeFilterHi5OnKoala {
