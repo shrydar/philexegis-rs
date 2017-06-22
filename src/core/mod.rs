@@ -237,12 +237,16 @@ const DEFAULT_HEIGHT: u32 = 200;
 
 impl Editor {
     pub fn new() -> Editor {
-        let file = std::fs::File::open("Deadlock repixel.plx").unwrap();
-        let layers = load_from_reader(file).unwrap();
+        let mut layerinit: Vec<Box<Layer>> = Vec::new();
+        if let Ok(file) = std::fs::File::open("Deadlock repixel.plx") {
+            if let Ok(layers) = load_from_reader(file) {
+                layerinit = layers;
+            }
+        }
         Editor {
             px_base: Pixmap::new(DEFAULT_WIDTH, DEFAULT_HEIGHT),
             px_view: Pixmap::new(DEFAULT_WIDTH, DEFAULT_HEIGHT),
-            layers: layers,
+            layers: layerinit,
         }
     }
     pub fn load(&mut self, path: &PathBuf) {
